@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulator Oszczędności z Podatkiem Belki</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F7F6F2; --surface: #FFFFFF; --border: #E2E0D8; --text: #1A1A18; --muted: #6B6960;
+    --jan: #0C447C; --jan-bg: #E6F1FB; --luk: #085041; --luk-bg: #E1F5EE;
+    --gain: #1D6B3E; --tax: #8B1A1A; --net: #7C4A00; --hdr: #1E293B; --accent: #2563EB;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+  .page { max-width: 1100px; margin: 0 auto; }
+  header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 2rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; }
+  header p { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+  .ctrl { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .ctrl label { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .ctrl-row { display: flex; align-items: center; gap: 8px; }
+  .ctrl input { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 15px; font-weight: 500; font-family: 'DM Mono', monospace; color: var(--text); background: var(--bg); outline: none; transition: border-color .15s; }
+  .ctrl input:focus { border-color: var(--accent); }
+  .ctrl .unit { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .ctrl .sub { font-size: 10px; color: var(--muted); margin-top: 5px; font-family: 'DM Mono', monospace; }
+  .dot-j { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--jan); margin-right: 5px; vertical-align: middle; }
+  .dot-l { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--luk); margin-right: 5px; vertical-align: middle; }
+  .persons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
+  .person-card { border-radius: 10px; padding: 16px; border: 1px solid var(--border); }
+  .person-card.jan-card { background: var(--jan-bg); border-color: #B5D4F4; }
+  .person-card.luk-card { background: var(--luk-bg); border-color: #9FE1CB; }
+  .person-name { font-size: 13px; font-weight: 500; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .person-name.jan { color: var(--jan); }
+  .person-name.luk { color: var(--luk); }
+  .person-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pstat { background: rgba(255,255,255,0.75); border-radius: 8px; padding: 10px 12px; }
+  .pstat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
+  .pstat-val { font-size: 14px; font-weight: 500; font-family: 'DM Mono', monospace; }
+  .pstat-val.c-jan { color: var(--jan); } .pstat-val.c-luk { color: var(--luk); } .pstat-val.c-gain { color: var(--gain); }
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .sum-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .sum-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+  .sum-val { font-size: 17px; font-weight: 500; font-family: 'DM Mono', monospace; }
+  .actions { display: flex; gap: 10px; margin-bottom: 1.25rem; justify-content: flex-end; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: opacity .15s; border: none; }
+  .btn:hover { opacity: 0.85; }
+  .btn-csv { background: var(--hdr); color: #fff; }
+  .btn-copy { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .note { font-size: 11px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 1.25rem; }
+  .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 700px; }
+  th { background: var(--hdr); color: #fff; font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; padding: 10px 12px; text-align: right; white-space: nowrap; }
+  th:first-child { text-align: center; width: 50px; }
+  td { padding: 8px 12px; text-align: right; border-top: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 12px; }
+  td:first-child { text-align: center; font-family: 'DM Sans', sans-serif; font-weight: 500; color: var(--muted); }
+  tr.even { background: var(--bg); } tr.odd { background: var(--surface); }
+  tr.total-row td { background: var(--hdr); color: #fff; font-weight: 500; border-top: 2px solid #2D3F55; }
+  .c-jan { color: var(--jan); } .c-luk { color: var(--luk); } .c-gain { color: var(--gain); }
+  .c-tax { color: var(--tax); } .c-net { color: var(--net); } .c-bold { font-weight: 500; }
+  .toast { display: none; position: fixed; bottom: 24px; right: 24px; background: var(--hdr); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; z-index: 999; }
+  .toast.show { display: block; animation: fadeIn .2s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); text-align: center; }
+  @media (max-width: 640px) { .controls { grid-template-columns: 1fr; } .summary { grid-template-columns: 1fr 1fr; } .persons { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div>
+      <h1>Kalkulator oszczędności z podatkiem Belki</h1>
+      <p>Lokata roczna z reinwestycją odsetek netto · podatek od zysków kapitałowych 19%</p>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="ctrl">
+      <label><span class="dot-j"></span>Wpłata Jana / miesiąc</label>
+      <div class="ctrl-row"><input type="number" id="jan" value="2000" step="100" min="0"><span class="unit">zł</span></div>
+      <div class="sub" id="jan-annual">= 24 000 zł / rok</div>
+    </div>
+    <div class="ctrl">
+      <label><span class="dot-l"></span>Wpłata Łukasza / miesiąc</label>
+      <div class="ctrl-row"><input type="number" id="luk" value="3000" step="100" min="0"><span class="unit">zł</span></div>
+      <div class="sub" id="luk-annual">= 36 000 zł / rok</div>
+    </div>
+    <div class="ctrl">
+      <label>Oprocentowanie lokaty</label>
+      <div class="ctrl-row"><input type="number" id="rate" value="7" step="0.5" min="0" max="30"><span class="unit">% rocznie</span></div>
+      <div class="sub">podatek Belki: 19% od odsetek</div>
+    </div>
+  </div>
+
+  <div class="persons">
+    <div class="person-card jan-card">
+      <div class="person-name jan">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Jan — podsumowanie po 20 latach
+      </div>
+      <div class="person-stats">
+        <div class="pstat"><div class="pstat-label">Wpłaty łącznie</div><div class="pstat-val c-jan" id="pj-paid">—</div></div>
+        <div class="pstat"><div class="pstat-label">Udział w odsetkach netto</div><div class="pstat-val c-gain" id="pj-gain">—</div></div>
+        <div class="pstat"><div class="pstat-label">Kapitał bez odsetek</div><div class="pstat-val c-jan" id="pj-cap">—</div></div>
+        <div class="pstat"><div class="pstat-label">Kapitał z odsetkami</div><div class="pstat-val c-gain" id="pj-total">—</div></div>
+      </div>
+    </div>
+    <div class="person-card luk-card">
+      <div class="person-name luk">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Łukasz — podsumowanie po 20 latach
+      </div>
+      <div class="person-stats">
+        <div class="pstat"><div class="pstat-label">Wpłaty łącznie</div><div class="pstat-val c-luk" id="pl-paid">—</div></div>
+        <div class="pstat"><div class="pstat-label">Udział w odsetkach netto</div><div class="pstat-val c-gain" id="pl-gain">—</div></div>
+        <div class="pstat"><div class="pstat-label">Kapitał bez odsetek</div><div class="pstat-val c-luk" id="pl-cap">—</div></div>
+        <div class="pstat"><div class="pstat-label">Kapitał z odsetkami</div><div class="pstat-val c-gain" id="pl-total">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="sum-card"><div class="sum-label">Łączne wpłaty (oboje)</div><div class="sum-val" id="s-paid">—</div></div>
+    <div class="sum-card"><div class="sum-label">Odsetki brutto</div><div class="sum-val c-gain" id="s-gross">—</div></div>
+    <div class="sum-card"><div class="sum-label">Podatek Belki łącznie</div><div class="sum-val c-tax" id="s-tax">—</div></div>
+    <div class="sum-card"><div class="sum-label">Kapitał końcowy (netto)</div><div class="sum-val c-bold" id="s-cap">—</div></div>
+  </div>
+
+  <div class="note">
+    Wpłaty miesięczne przeliczane na roczne (×12). Lokata nalicza odsetki raz w roku od całości kapitału. Odsetki netto po podatku Belki reinwestowane w kolejnym roku. Udział w odsetkach proporcjonalny do wpłat.
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-copy" onclick="copyLink()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+      Kopiuj link
+    </button>
+    <button class="btn btn-csv" onclick="exportCSV()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Pobierz CSV (Google Sheets)
+    </button>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Rok</th>
+          <th>Wpłata Jan</th>
+          <th>Wpłata Łukasz</th>
+          <th>Łączna wpłata</th>
+          <th>Kapitał na lokacie</th>
+          <th>Odsetki brutto</th>
+          <th>Podatek 19%</th>
+          <th>Odsetki netto</th>
+          <th>Kapitał na koniec</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <footer>Kalkulator nie stanowi doradztwa finansowego. Podatek Belki: 19% od odsetek (art. 30a ustawy o PIT).</footer>
+</div>
+
+<div class="toast" id="toast">Skopiowano link!</div>
+
+<script>
+var tableData = [];
+function n(v) { return Math.round(v); }
+function fmt(v) { return n(v).toLocaleString('pl-PL') + ' zł'; }
+
+function getParams() {
+  return {
+    jan:  document.getElementById('jan').value,
+    luk:  document.getElementById('luk').value,
+    rate: document.getElementById('rate').value
+  };
+}
+
+function loadFromHash() {
+  try {
+    var hash = window.location.hash.replace('#', '');
+    if (!hash) return;
+    var p = new URLSearchParams(hash);
+    if (p.get('jan'))  document.getElementById('jan').value  = p.get('jan');
+    if (p.get('luk'))  document.getElementById('luk').value  = p.get('luk');
+    if (p.get('rate')) document.getElementById('rate').value = p.get('rate');
+  } catch(e) {}
+}
+
+function calc() {
+  var janM = parseFloat(document.getElementById('jan').value) || 0;
+  var lukM = parseFloat(document.getElementById('luk').value) || 0;
+  var rate = parseFloat(document.getElementById('rate').value) || 0;
+  var janY = janM * 12;
+  var lukY = lukM * 12;
+  var total = janY + lukY;
+  var share = total > 0 ? janY / total : 0.5;
+
+  document.getElementById('jan-annual').textContent = '= ' + n(janY).toLocaleString('pl-PL') + ' zł / rok';
+  document.getElementById('luk-annual').textContent = '= ' + n(lukY).toLocaleString('pl-PL') + ' zł / rok';
+
+  var r = rate / 100;
+  var BELKA = 0.19;
+  var cap = 0;
+  var sumPaid=0, sumGross=0, sumTax=0, sumNet=0;
+  var sumJanPaid=0, sumLukPaid=0, sumJanNet=0, sumLukNet=0;
+  tableData = [];
+  var rows = '';
+
+  for (var y = 1; y <= 20; y++) {
+    var lokata = cap + total;
+    var gross  = lokata * r;
+    var tax    = gross * BELKA;
+    var net    = gross - tax;
+    var capEnd = lokata + net;
+
+    sumPaid    += total;
+    sumGross   += gross;
+    sumTax     += tax;
+    sumNet     += net;
+    sumJanPaid += janY;
+    sumLukPaid += lukY;
+    sumJanNet  += net * share;
+    sumLukNet  += net * (1 - share);
+    cap = capEnd;
+
+    tableData.push([y, n(janY), n(lukY), n(total), n(lokata), n(gross), n(tax), n(net), n(capEnd)]);
+
+    var cls = y % 2 === 0 ? 'even' : 'odd';
+    rows += '<tr class="' + cls + '">' +
+      '<td>' + y + '</td>' +
+      '<td class="c-jan">' + fmt(janY) + '</td>' +
+      '<td class="c-luk">' + fmt(lukY) + '</td>' +
+      '<td>' + fmt(total) + '</td>' +
+      '<td>' + fmt(lokata) + '</td>' +
+      '<td class="c-gain">+' + fmt(gross) + '</td>' +
+      '<td class="c-tax">-' + fmt(tax) + '</td>' +
+      '<td class="c-net">+' + fmt(net) + '</td>' +
+      '<td class="c-bold">' + fmt(capEnd) + '</td>' +
+      '</tr>';
+  }
+
+  rows += '<tr class="total-row">' +
+    '<td>SUMA</td>' +
+    '<td>' + fmt(sumJanPaid) + '</td>' +
+    '<td>' + fmt(sumLukPaid) + '</td>' +
+    '<td>' + fmt(sumPaid) + '</td>' +
+    '<td>—</td>' +
+    '<td>+' + fmt(sumGross) + '</td>' +
+    '<td>-' + fmt(sumTax) + '</td>' +
+    '<td>+' + fmt(sumNet) + '</td>' +
+    '<td>' + fmt(cap) + '</td>' +
+    '</tr>';
+
+  document.getElementById('tbody').innerHTML = rows;
+  document.getElementById('s-paid').textContent  = fmt(sumPaid);
+  document.getElementById('s-gross').textContent = fmt(sumGross);
+  document.getElementById('s-tax').textContent   = fmt(sumTax);
+  document.getElementById('s-cap').textContent   = fmt(cap);
+
+  document.getElementById('pj-paid').textContent  = fmt(sumJanPaid);
+  document.getElementById('pj-gain').textContent  = fmt(sumJanNet);
+  document.getElementById('pj-cap').textContent   = fmt(sumJanPaid);
+  document.getElementById('pj-total').textContent = fmt(sumJanPaid + sumJanNet);
+
+  document.getElementById('pl-paid').textContent  = fmt(sumLukPaid);
+  document.getElementById('pl-gain').textContent  = fmt(sumLukNet);
+  document.getElementById('pl-cap').textContent   = fmt(sumLukPaid);
+  document.getElementById('pl-total').textContent = fmt(sumLukPaid + sumLukNet);
+}
+
+function copyLink() {
+  var p = getParams();
+  var hash = 'jan=' + p.jan + '&luk=' + p.luk + '&rate=' + p.rate;
+  var url = window.location.href.split('#')[0] + '#' + hash;
+  navigator.clipboard.writeText(url).then(function() {
+    var t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 2500);
+  }).catch(function() {
+    prompt('Skopiuj ten link:', url);
+  });
+}
+
+function exportCSV() {
+  var p = getParams();
+  var lines = [
+    'Kalkulator oszczednosci - Jan & Lukasz',
+    'Wplata Jana (miesieczna):,' + p.jan + ' zl',
+    'Wplata Lukasza (miesieczna):,' + p.luk + ' zl',
+    'Oprocentowanie:,' + p.rate + '%',
+    'Podatek Belki:,19%',
+    '',
+    'Rok,Wplata Jan (zl),Wplata Lukasz (zl),Laczna wplata (zl),Kapital na lokacie (zl),Odsetki brutto (zl),Podatek 19% (zl),Odsetki netto (zl),Kapital na koniec (zl)'
+  ];
+  tableData.forEach(function(r) { lines.push(r.join(',')); });
+  var blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'kalkulator-oszczednosci.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+['jan', 'luk', 'rate'].forEach(function(id) {
+  document.getElementById(id).addEventListener('input', calc);
+});
+
+loadFromHash();
+calc();
+</script>
+</body>
+</html>
